@@ -23,15 +23,26 @@ if (LINE.includes("\n") || LINE.includes("\r")) {
   throw new Error("Line must be a single line (no newline characters)");
 }
 
-// Reject invisible control characters (tab, NUL, DEL, other C0 controls):
-// they are not visible in a single read, can break the line's rendering,
-// and could trip the gate's UTF-8/single-line expectations. A line is
-// printable text only.
+// Reject invisible control characters (tab, NUL, DEL, other C0 controls,
+// C1 controls U+0080–U+009F) and invisible format characters (zero-width
+// space U+200B, zero-width non-joiner U+200C, zero-width joiner U+200D,
+// word joiner U+2060, byte-order mark U+FEFF): they are not visible in a
+// single read, can break the line's rendering, and could trip the gate's
+// UTF-8/single-line expectations. A line is printable text only.
 for (const ch of LINE) {
   const code = ch.codePointAt(0)!;
-  if (code < 0x20 || code === 0x7f) {
+  if (
+    code < 0x20 ||
+    code === 0x7f ||
+    (code >= 0x80 && code <= 0x9f) ||
+    code === 0x200b ||
+    code === 0x200c ||
+    code === 0x200d ||
+    code === 0x2060 ||
+    code === 0xfeff
+  ) {
     throw new Error(
-      `Line contains a control character U+${code.toString(16).toUpperCase().padStart(4, "0")}`,
+      `Line contains an invisible character U+${code.toString(16).toUpperCase().padStart(4, "0")}`,
     );
   }
 }
